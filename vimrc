@@ -88,12 +88,6 @@ endif
 
 autocmd FileType tex setlocal textwidth=78
 
-autocmd FileType ruby runtime ruby_mappings.vim
-autocmd FileType cs runtime dotnet_mappings.vim
-autocmd FileType javascript runtime javascript_mappings.vim
-autocmd FileType python runtime python_mappings.vim
-autocmd FileType java runtime java_mappings.vim
-
 " wstrip plugin
 " don't highlight trailing whitespace
 let g:wstrip_highlight = 0
@@ -212,7 +206,7 @@ let g:puppet_align_hashes = 0
 let $FZF_DEFAULT_COMMAND = 'find . -name "*" -type f 2>/dev/null
                             \ | grep -v -E "tmp\/|.gitmodules|.git\/|deps\/|_build\/|node_modules\/|vendor\/"
                             \ | sed "s|^\./||"'
-let $FZF_DEFAULT_OPTS = '--reverse'
+let $FZF_DEFAULT_OPTS = '--reverse -i'
 let g:fzf_tags_command = 'ctags -R --exclude=".git\|.svn\|log\|tmp\|db\|pkg" --extra=+f --langmap=Lisp:+.clj'
 let g:fzf_action = {
   \ 'ctrl-t': 'tab split',
@@ -230,6 +224,8 @@ let nose_test = system('grep -q "nose" requirements.txt')
 if v:shell_error == 0
   let test#python#runner = 'nose'
 endif
+let g:test#preserve_screen = 1 " dont clear the screen before running
+let g:test#echo_command = 0 " dont echo the command before running
 
 if filereadable(expand('WORKSPACE'))
   let test#custom_runners['java'] = ['bazeltest']
@@ -335,6 +331,58 @@ if !has('nvim-0.5')
   call s:setup_vim_lsp()
 endif
 
+"
+" ========= AI ========
+"
+" Mappings
+" ---------------------
+"
+" Copilot: [a]i [a]uto-[c]ompletions
+map <silent> <leader>aac :call ToggleCopilotCompletions()<CR>
+
+" Copilot: [a]i [a]sk
+noremap <silent> <leader>aa :call ToggleCopilotChat()<CR>
+
+" Copilot: [a]i [l]ogin
+noremap <silent> <leader>al :Copilot auth<CR>
+
+" Copilot: [a]i [m]odel selection
+noremap <silent> <leader>am :CopilotChatModels<CR>
+
+" Copilot: [a]i [e]xplain
+vmap <leader>ae <Plug>CopilotChatAddSelection
+
+" Functions
+" ---------------------
+
+" Disable copilot.vim completions by default
+let g:copilot_enabled = 0
+func! ToggleCopilotCompletions()
+  if g:copilot_enabled
+    let g:copilot_enabled = 0
+    echo "Copilot completions disabled"
+  else
+    let g:copilot_enabled = 1
+    echo "Copilot completions enabled"
+  endif
+endfunc
+
+func! ToggleCopilotChat()
+  if g:copilot_chat_active_buffer != -1
+    execute 'bd' g:copilot_chat_active_buffer
+  else
+    execute 'CopilotChatOpen'
+  endif
+endfunc
+
+func! GotoCopilotChat()
+  if g:copilot_chat_active_buffer != -1
+    execute 'CopilotChatFocus'
+  else
+    execute 'CopilotChatOpen'
+  endif
+endfunc
+
 " ========= Shortcuts ========
 
 " ALE
@@ -367,7 +415,7 @@ function! SmartFuzzy()
   if len(root) == 0 || v:shell_error
     Files
   else
-    GFiles -co --exclude-standard -- . ':!:vendor/*'
+    GFiles -co --exclude-standard -- . ':!:vendor/*' ':!:*.rbi'
   endif
 endfunction
 
@@ -376,6 +424,8 @@ map <silent> <leader>ff :SmartFuzzy<CR>
 map <silent> <leader>fg :GFiles<CR>
 map <silent> <leader>fb :Buffers<CR>
 map <silent> <leader>ft :Tags<CR>
+map <silent> <leader>fm :Maps<CR>
+map <silent> <leader>sk :Maps<CR>
 
 map <silent> <C-p> :Files<CR>
 
@@ -595,6 +645,13 @@ function s:EnableShfmt()
 endfunction
 
 call s:EnableShfmt()
+
+" Navigate windows without <C-w>
+
+nmap <silent> <C-h> <C-w><C-h>
+nmap <silent> <C-j> <C-w><C-j>
+nmap <silent> <C-k> <C-w><C-k>
+nmap <silent> <C-l> <C-w><C-l>
 
 "-------- Local Overrides
 ""If you have options you'd like to override locally for
